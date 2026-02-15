@@ -34,13 +34,28 @@ def list_files():
     output = "<h2>Uploaded Files</h2>"
     
     for file in files:
-        output += f'<p><a href="/download/{file}">{file}</a></p>'
-
+        output += f'''
+        <p>
+        <a href="/download/{file}">{file}</a> 
+        | <a href="/delete/{file}">Delete</a>
+        </p>
+        '''
+        
     return output
 
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+
+@app.route('/delete/<filename>')
+def delete_file(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return f"{filename} deleted successfully"
+    
+    return "File not found"
 
 
 if __name__ == "__main__":

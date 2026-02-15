@@ -1,4 +1,5 @@
 from flask import Flask, request
+from flask import send_from_directory
 import os
 
 app = Flask(__name__)
@@ -33,9 +34,13 @@ def list_files():
     output = "<h2>Uploaded Files</h2>"
     
     for file in files:
-        output += f"<p>{file}</p>"
-    
+        output += f'<p><a href="/download/{file}">{file}</a></p>'
+
     return output
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
 
 if __name__ == "__main__":

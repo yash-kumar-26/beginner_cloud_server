@@ -1,6 +1,7 @@
 from flask import Flask, request
 from flask import send_from_directory
 import os
+import time
 
 app = Flask(__name__)
 
@@ -23,7 +24,9 @@ def home():
 def upload_file():
     file = request.files['file']
     if file:
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], file.filename))
+        timestamp = str(int(time.time()))
+        new_filename = timestamp + "_" + file.filename
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
         return "File uploaded successfully"
     return "No file selected"
 
@@ -40,7 +43,6 @@ def list_files():
         | <a href="/delete/{file}">Delete</a>
         </p>
         '''
-        
     return output
 
 @app.route('/download/<filename>')

@@ -3,6 +3,7 @@ from flask import send_from_directory
 import os
 import time
 import sqlite3
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
@@ -26,7 +27,7 @@ def upload_file():
     file = request.files['file']
     if file:
         timestamp = str(int(time.time()))
-        new_filename = timestamp + "_" + file.filename
+        new_filename = timestamp + "_" + secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
         conn = sqlite3.connect('database/files.db')
         cursor = conn.cursor()

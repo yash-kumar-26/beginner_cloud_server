@@ -9,6 +9,10 @@ app = Flask(__name__)
 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/")
 def home():
@@ -22,26 +26,31 @@ def home():
 <a href="/files">View Uploaded Files</a>
     '''
 
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    file = request.files['file']
-    if file:
-        timestamp = str(int(time.time()))
-        new_filename = timestamp + "_" + secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
-        conn = sqlite3.connect('database/files.db')
-        cursor = conn.cursor()
+    file = request.files.get('file')
+    if not file or file.filename == '':
+        return "No file uploaded", 400
+    
+    if not allowed_file(file.filename):
+        return "File type not allowed", 400
 
-        cursor.execute(
-        "INSERT INTO files (original_name, saved_name, upload_time) VALUES (?, ?, ?)",
-        (file.filename, new_filename, timestamp)
+    timestamp = str(int(time.time()))
+    new_filename = timestamp + "_" + secure_filename(file.filename)
+    file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
+    conn = sqlite3.connect('database/files.db')
+    cursor = conn.cursor()
+
+    cursor.execute(
+    "INSERT INTO files (original_name, saved_name, upload_time) VALUES (?, ?, ?)",
+    (file.filename, new_filename, timestamp)
     )
 
-        conn.commit()
-        conn.close()
-        return "File uploaded successfully"
-    return "No file selected"
-
+    conn.commit()
+    conn.close()
+    return "File uploaded successfully"
+ 
 @app.route("/files")
 def list_files():
     conn = sqlite3.connect('database/files.db')

@@ -4,6 +4,7 @@ import os
 import time
 import sqlite3
 from werkzeug.utils import secure_filename
+from markupsafe import escape
 
 app = Flask(__name__)
 
@@ -69,9 +70,9 @@ def list_files():
 
         output += f'''
         <p>
-        {original_name}
-        | <a href="/download/{saved_name}">Download</a>
-        | <a href="/delete/{saved_name}">Delete</a>
+        {escape(original_name)}
+        | <a href="/download/{escape(saved_name)}">Download</a>
+        | <a href="/delete/{escape(saved_name)}">Delete</a>
         </p>
         '''
 

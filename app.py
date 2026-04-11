@@ -81,7 +81,9 @@ def list_files():
         <p>
         {escape(original_name)}
         | <a href="/download/{escape(saved_name)}">Download</a>
-        | <a href="/delete/{escape(saved_name)}">Delete</a>
+        | <form method="POST" action="/delete/{escape(saved_name)}">
+        <button type="submit">Delete</button>
+        </form>
         </p>
         '''
 
@@ -91,7 +93,7 @@ def list_files():
 def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
-@app.route('/delete/<filename>')
+@app.route('/delete/<filename>', methods=['POST'])
 def delete_file(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     

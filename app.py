@@ -2,6 +2,7 @@ from flask import Flask, request
 from flask import send_from_directory
 import os
 import time
+import uuid
 import sqlite3
 from werkzeug.utils import secure_filename
 from markupsafe import escape
@@ -37,31 +38,39 @@ def upload_file():
     if not allowed_file(file.filename):
         return "File type not allowed", 400
 
-    timestamp = str(int(time.time()))
-    new_filename = timestamp + "_" + secure_filename(file.filename)
+    unique_id = str(uuid.uuid4())
+    new_filename = unique_id + "_" + secure_filename(file.filename)
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
-    conn = sqlite3.connect('database/files.db')
-    cursor = conn.cursor()
+    conn = None
+    try:
+        conn = sqlite3.connect('database/files.db')
+        cursor = conn.cursor()
 
-    cursor.execute(
-    "INSERT INTO files (original_name, saved_name, upload_time) VALUES (?, ?, ?)",
-    (file.filename, new_filename, timestamp)
-    )
+        cursor.execute(
+        "INSERT INTO files (original_name, saved_name, upload_time) VALUES (?, ?, ?)",
+        (file.filename, new_filename, str(int(time.time())))
+        )
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn:
+            conn.close()
     return "File uploaded successfully"
  
 @app.route("/files")
 def list_files():
-    conn = sqlite3.connect('database/files.db')
-    cursor = conn.cursor()
+    conn = None
+    try:
+        conn = sqlite3.connect('database/files.db')
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT original_name, saved_name FROM files")
-    files = cursor.fetchall()
+        cursor.execute("SELECT original_name, saved_name FROM files")
+        files = cursor.fetchall()
     
-    conn.close()
-    
+    finally:
+        if conn:
+            conn.close()
+
     output = "<h2>Uploaded Files</h2>"
     
     for file in files:
@@ -89,31 +98,39 @@ def delete_file(filename):
     if os.path.exists(file_path):
         os.remove(file_path)
 
-        conn = sqlite3.connect('database/files.db')
-        cursor = conn.cursor()
+        conn = None
+        try:
+            conn = sqlite3.connect('database/files.db')
+            cursor = conn.cursor()
 
-        cursor.execute("DELETE FROM files WHERE saved_name = ?", (filename,))
-        conn.commit()
-        conn.close()
+            cursor.execute("DELETE FROM files WHERE saved_name = ?", (filename,))
+            conn.commit()
+        finally:
+            if conn:
+                conn.close()
         return f"{filename} deleted successfully"
     
     return "File not found"
 
 def init_db():
-    conn = sqlite3.connect('database/files.db')
-    cursor = conn.cursor()
+    conn = None
+    try:
+        conn = sqlite3.connect('database/files.db')
+        cursor = conn.cursor()
     
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            original_name TEXT,
-            saved_name TEXT,
-            upload_time TEXT
-        )
-    ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                original_name TEXT,
+                saved_name TEXT,
+                upload_time TEXT
+            )
+        ''')
     
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        if conn:
+            conn.close()
 
 init_db()
 

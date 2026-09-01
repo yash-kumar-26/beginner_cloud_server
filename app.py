@@ -1,17 +1,23 @@
-from flask import Flask, request
-from flask import send_from_directory
+from flask import Flask, request, send_file
 import os
 import time
 import uuid
 import sqlite3
 from werkzeug.utils import secure_filename
 from markupsafe import escape
+from google.cloud import storage
+import io
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx'}
+
+#GCS Configuration
+GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME', 'yash-file-uploads')
+storage_client = storage.Client()
+bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -40,7 +46,8 @@ def upload_file():
 
     unique_id = str(uuid.uuid4())
     new_filename = unique_id + "_" + secure_filename(file.filename)
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
+    blob = bucket.blob(new_filename)
+    blob.upload_from_file(file, content_type=file.content_type)
     conn = None
     try:
         conn = sqlite3.connect('database/files.db')
@@ -91,14 +98,16 @@ def list_files():
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    blob = bucket.blob(filename)
+    file_data = blob.download_as_bytes()
+    return send_file(io.BytesIO(file_data), download_name=filename, as_attachment=True)
 
 @app.route('/delete/<filename>', methods=['POST'])
 def delete_file(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    blob = bucket.blob(filename)
     
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    if blob.exists():
+        blob.delete()
 
         conn = None
         try:
